@@ -29,6 +29,14 @@ def operations():
     op = [increase_red, decrease_red, increase_green, decrease_green, increase_blue, decrease_blue]
     return op
 
+def distance(img):
+    original_img = plt.imread('img.png')
+    distance_r = abs(original_img[:, :, 0] - img[:, :, 0])
+    distance_g = abs(original_img[:, :, 1] - img[:, :, 1])
+    distance_b = abs(original_img[:, :, 2] - img[:, :, 2])
+    total_dist = np.sum(distance_r) + np.sum(distance_g) + np.sum(distance_b)
+    return pow(total_dist, 2)
+
 def over(img):
     original_img = plt.imread('img.png')
     distance_r = abs(original_img[:, :, 0] - img[:, :, 0])
@@ -112,7 +120,7 @@ class Tree:
 
     def eval_moves(self):
         """Return a dict of operation/score pairs for the root position."""
-        return {k: 1 - v.score() for (k, v) in self.root.children.items()}
+        return {k: v.score() for (k, v) in self.root.children.items()}
 
     def search_step(self):
         """A single MCTS search step."""
@@ -120,7 +128,7 @@ class Tree:
         cur = self.root
         while not cur.expandable():
             if cur.terminal():
-                if good_op(cur.state):
+                if over(cur.state):
                     # the corrupted image is fixed.
                     cur.backprop(1)
                 return
@@ -135,11 +143,11 @@ class Tree:
     def rollout(self, node):
         """Make a random simulation from the given state."""
         im = node.state
-        for i in range(100):
-            if good_op(im):
+        for i in range(10):
+            if over(im):
                 return 1
             im = random.choice(operations())(im)
-        return 0
+        return np.exp(-0.01*(distance(im)))
 
     def dump(self, file, node=None, moves=[], maxlevel=5):
         """Write to file a representation of the search tree."""
@@ -166,7 +174,7 @@ class Tree:
         assert op in self.root.children
         child = self.root.children[op]
         if child is None:
-            child = Node(im, None)
+            child = Node(op(im), None)
         else:
             child.parent = None
         self.root = child
@@ -175,8 +183,6 @@ def play_tree(epochs):
     tree = Tree()
     for _ in range(epochs):
         op = random.choice(operations())
-        if op is None:
-            break
         tree.make_move(op, tree.root.state)
         if over(tree.root.state):
             print(_)
@@ -184,16 +190,18 @@ def play_tree(epochs):
             plt.imshow(tree.root.state)
             plt.show()
             break
-        tree.search_step()
+        while tree.root.expandable():
+            tree.search_step()
         #cur_time = time.time()
         evals = tree.eval_moves()
         evals = sorted(evals.items(), key=lambda x: -x[1])
+        print(evals[0][0])
         print()
         for k, v in evals:
             print(f"Operation {k}:  score {v:.2f}")
-        tree.make_move(evals[0][0])
+        tree.make_move(evals[0][0], tree.root.state)
 
 if __name__ == '__main__':
     im = plt.imread('img.png')
     im2 = plt.imread('im2.png')
-    play_tree(100)
+    play_tree(10)
