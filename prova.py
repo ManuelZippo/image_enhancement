@@ -5,39 +5,67 @@ import math
 
 
 def increase_red(img):
+    """
+    Increases the red channel of the input image.
+    """
     img[:, :, 0] = img[:, :, 0] + 0.01
     return img
 def decrease_red(img):
+    """
+    Decreases the red channel of the input image.
+    """
     img[:, :, 0] = img[:, :, 0] + 0.01
     return img
 
 def increase_green(img):
+    """
+    Increases the green channel of the input image.
+    """
     img[:, :, 1] = img[:, :, 1] + 0.01
     return img
 def decrease_green(img):
+    """
+    Decreases the green channel of the input image.
+    """
     img[:, :, 1] = img[:, :, 1] + 0.01
     return img
 
 def increase_blue(img):
+    """
+    Increases the blue channel of the input image.
+    """
     img[:, :, 2] = img[:, :, 2] + 0.01
     return img
 def decrease_blue(img):
+    """
+    Decreases the blue channel of the input image.
+    """
     img[:, :, 2] = img[:, :, 2] + 0.01
     return img
 
 def operations():
+    """
+    Returns a list of functions, relative to the operation that can be performed on an image.
+    """
     op = [increase_red, decrease_red, increase_green, decrease_green, increase_blue, decrease_blue]
     return op
 
 def distance(img):
+    """
+    Given a target image X and its corrupted version X', performs ||X - X'||^2
+    """
     original_img = plt.imread('img.png')
     distance_r = abs(original_img[:, :, 0] - img[:, :, 0])
     distance_g = abs(original_img[:, :, 1] - img[:, :, 1])
     distance_b = abs(original_img[:, :, 2] - img[:, :, 2])
     total_dist = np.sum(distance_r) + np.sum(distance_g) + np.sum(distance_b)
+    #print(pow(total_dist, 2))
     return pow(total_dist, 2)
 
 def over(img):
+    """
+    Checks if the input image is very similar to the target image.
+    """
     original_img = plt.imread('img.png')
     distance_r = abs(original_img[:, :, 0] - img[:, :, 0])
     distance_g = abs(original_img[:, :, 1] - img[:, :, 1])
@@ -46,19 +74,21 @@ def over(img):
     print(total_dist)
     return total_dist < 20000
 
-def good_op(img):
-    original_img = plt.imread('img.png')
-    altered_img = plt.imread('im2.png')
-    distance_r1 = abs(original_img[:, :, 0] - img[:, :, 0])
-    distance_g1 = abs(original_img[:, :, 1] - img[:, :, 1])
-    distance_b1 = abs(original_img[:, :, 2] - img[:, :, 2])
-    distance_r2 = abs(original_img[:, :, 0] - altered_img[:, :, 0])
-    distance_g2 = abs(original_img[:, :, 1] - altered_img[:, :, 1])
-    distance_b2 = abs(original_img[:, :, 2] - altered_img[:, :, 2])
-    total_dist1 = np.sum(distance_r1) + np.sum(distance_g1) + np.sum(distance_b1)
-    total_dist2 = np.sum(distance_r2) + np.sum(distance_g2) + np.sum(distance_b2)
-    return total_dist1 < total_dist2
+def orderOfMag(x):
+    """
+    Returns the order of magnitude of the input value
+    """
+    oom = 1
+    while x >= 10:
+        oom = oom*10
+        x = x/10
+    return oom
 
+def alpha(n):
+    """
+    Calculates the alpha coefficient as the reciprocal of the distance between two images
+    """
+    return 1/(orderOfMag(n))
 
 class Node:
     """A node in the MCTS search tree."""
@@ -131,7 +161,8 @@ class Tree:
                 if over(cur.state):
                     # the corrupted image is fixed.
                     cur.backprop(1)
-                return
+                else:
+                    cur.backprop(np.exp(alpha(distance(cur.state))*(distance(cur.state))))
             cur = cur.choose_child()
         # 2) Create the new node.
         newnode = cur.expand()
@@ -147,7 +178,8 @@ class Tree:
             if over(im):
                 return 1
             im = random.choice(operations())(im)
-        return np.exp(-0.01*(distance(im)))
+        #print(np.exp(alpha(distance(im))*(distance(im))))
+        return np.exp(alpha(distance(im))*(distance(im)))
 
     def dump(self, file, node=None, moves=[], maxlevel=5):
         """Write to file a representation of the search tree."""
@@ -190,9 +222,10 @@ def play_tree(epochs):
             plt.imshow(tree.root.state)
             plt.show()
             break
-        while tree.root.expandable():
+        for i in range(10):
+            if over(tree.root.state):
+                break
             tree.search_step()
-        #cur_time = time.time()
         evals = tree.eval_moves()
         evals = sorted(evals.items(), key=lambda x: -x[1])
         print(evals[0][0])
@@ -200,6 +233,12 @@ def play_tree(epochs):
         for k, v in evals:
             print(f"Operation {k}:  score {v:.2f}")
         tree.make_move(evals[0][0], tree.root.state)
+        if over(tree.root.state):
+            print(_)
+            print("Over")
+            plt.imshow(tree.root.state)
+            plt.show()
+            break
 
 if __name__ == '__main__':
     im = plt.imread('img.png')
