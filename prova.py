@@ -14,7 +14,7 @@ def decrease_red(img):
     """
     Decreases the red channel of the input image.
     """
-    img[:, :, 0] = img[:, :, 0] + 0.01
+    img[:, :, 0] = img[:, :, 0] - 0.01
     return img
 
 def increase_green(img):
@@ -27,7 +27,7 @@ def decrease_green(img):
     """
     Decreases the green channel of the input image.
     """
-    img[:, :, 1] = img[:, :, 1] + 0.01
+    img[:, :, 1] = img[:, :, 1] - 0.01
     return img
 
 def increase_blue(img):
@@ -40,7 +40,7 @@ def decrease_blue(img):
     """
     Decreases the blue channel of the input image.
     """
-    img[:, :, 2] = img[:, :, 2] + 0.01
+    img[:, :, 2] = img[:, :, 2] - 0.01
     return img
 
 def operations():
@@ -71,7 +71,7 @@ def over(img):
     distance_g = abs(original_img[:, :, 1] - img[:, :, 1])
     distance_b = abs(original_img[:, :, 2] - img[:, :, 2])
     total_dist = np.sum(distance_r) + np.sum(distance_g) + np.sum(distance_b)
-    print(total_dist)
+    #print(total_dist)
     return total_dist < 20000
 
 def orderOfMag(x):
@@ -84,11 +84,12 @@ def orderOfMag(x):
         x = x/10
     return oom
 
-def alpha(n):
+def alpha():
     """
-    Calculates the alpha coefficient as the reciprocal of the distance between two images
+    Returns the alpha coefficient
     """
-    return 1/(orderOfMag(n))
+    #return 1/(orderOfMag(n))
+    return -0.00000000001
 
 class Node:
     """A node in the MCTS search tree."""
@@ -162,7 +163,7 @@ class Tree:
                     # the corrupted image is fixed.
                     cur.backprop(1)
                 else:
-                    cur.backprop(np.exp(alpha(distance(cur.state))*(distance(cur.state))))
+                    cur.backprop(np.exp(alpha()*(distance(cur.state))))
             cur = cur.choose_child()
         # 2) Create the new node.
         newnode = cur.expand()
@@ -174,12 +175,20 @@ class Tree:
     def rollout(self, node):
         """Make a random simulation from the given state."""
         im = node.state
-        for i in range(10):
+        new_op = None
+        #plt.ion()
+        for i in range(2):
             if over(im):
                 return 1
-            im = random.choice(operations())(im)
-        #print(np.exp(alpha(distance(im))*(distance(im))))
-        return np.exp(alpha(distance(im))*(distance(im)))
+            new_op = random.choice(operations())
+            im = new_op(im)
+            #plt.clf()
+            #plt.imshow(im)
+            #plt.pause(0.01)
+        #plt.ioff()
+        #print(distance(im))
+        print(new_op, np.exp(alpha()*(distance(im))))
+        return np.exp(alpha()*(distance(im)))
 
     def dump(self, file, node=None, moves=[], maxlevel=5):
         """Write to file a representation of the search tree."""
@@ -222,16 +231,21 @@ def play_tree(epochs):
             plt.imshow(tree.root.state)
             plt.show()
             break
-        for i in range(10):
+        plt.ion()
+        for i in range(6):
             if over(tree.root.state):
                 break
             tree.search_step()
+            plt.clf()
+            plt.imshow(tree.root.state)
+            plt.pause(0.01)
+        plt.ioff()
         evals = tree.eval_moves()
         evals = sorted(evals.items(), key=lambda x: -x[1])
         print(evals[0][0])
         print()
         for k, v in evals:
-            print(f"Operation {k}:  score {v:.2f}")
+            print(f"Operation {k}:  score {v:.5f}")
         tree.make_move(evals[0][0], tree.root.state)
         if over(tree.root.state):
             print(_)
@@ -240,7 +254,8 @@ def play_tree(epochs):
             plt.show()
             break
 
+
 if __name__ == '__main__':
     im = plt.imread('img.png')
     im2 = plt.imread('im2.png')
-    play_tree(10)
+    play_tree(100)
