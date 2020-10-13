@@ -72,7 +72,7 @@ def over(img):
     distance_b = abs(original_img[:, :, 2] - img[:, :, 2])
     total_dist = np.sum(distance_r) + np.sum(distance_g) + np.sum(distance_b)
     #print(total_dist)
-    return total_dist < 20000
+    return total_dist < 10000
 
 def orderOfMag(x):
     """
@@ -177,7 +177,7 @@ class Tree:
         im = node.state
         new_op = None
         #plt.ion()
-        for i in range(2):
+        for i in range(30):
             if over(im):
                 return 1
             new_op = random.choice(operations())
@@ -221,21 +221,29 @@ class Tree:
         self.root = child
 
 def play_tree(epochs):
+    orig_im = plt.imread('img.png')
+    corr_im = plt.imread('im2.png')
     tree = Tree()
     for _ in range(epochs):
         op = random.choice(operations())
         tree.make_move(op, tree.root.state)
         if over(tree.root.state):
             print(_)
-            print("Over")
+            print("Image recovered")
+            plt.figure(1)
+            plt.imshow(orig_im)
+            plt.figure(2)
             plt.imshow(tree.root.state)
+            plt.figure(3)
+            plt.imshow(corr_im)
             plt.show()
             break
         plt.ion()
-        for i in range(6):
+        for i in range(40):
             if over(tree.root.state):
                 break
             tree.search_step()
+            tree.root.state = tree.root.state.clip(0,1)
             plt.clf()
             plt.imshow(tree.root.state)
             plt.pause(0.01)
@@ -249,8 +257,13 @@ def play_tree(epochs):
         tree.make_move(evals[0][0], tree.root.state)
         if over(tree.root.state):
             print(_)
-            print("Over")
+            print("Image recovered")
+            plt.figure(1)
+            plt.imshow(orig_im)
+            plt.figure(2)
             plt.imshow(tree.root.state)
+            plt.figure(3)
+            plt.imshow(corr_im)
             plt.show()
             break
 
